@@ -4,6 +4,7 @@
 # @File :example_files_copy.py
 # @Software:PyCharm
 import sys
+import translation as tra
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QMainWindow
 from example_files import Ui_MainWindow
@@ -16,6 +17,8 @@ class Run_MainWindow(Ui_MainWindow,QMainWindow):
         self.pushButton_6.clicked.connect(self.textEdit.clear)
         self.pushButton_3.clicked.connect(self.get_dir)
         self.pushButton_2.clicked.connect(self.set_dir)
+        self.pushButton.clicked.connect(self.clear)
+        self.pushButton_4.clicked.connect(self.translate_file)
 
     def get_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self,"选择文件夹","/")
@@ -26,6 +29,17 @@ class Run_MainWindow(Ui_MainWindow,QMainWindow):
 
     def show_message(self):
         QMessageBox.information(self,"任务信息","任务完成",QMessageBox.Yes)
+
+    def clear(self):
+        self.show_message()
+
+    def translate_file(self):
+        content = self.textEdit.toPlainText()
+        print(repr(content).replace(",",""))
+        result = tra.translate(repr(content).replace(",",""))
+        result = result.replace("\ n","\r\n")
+        print(result)
+        self.textEdit_2.setText(result)
 
 
 
