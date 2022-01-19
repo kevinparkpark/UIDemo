@@ -15,10 +15,12 @@ class Run_MainWindow(Ui_MainWindow,QMainWindow):
         self.setupUi(self)
         self.pushButton_7.clicked.connect(self.close)
         self.pushButton_6.clicked.connect(self.textEdit.clear)
+        self.pushButton_6.clicked.connect(self.textEdit_2.clear)
         self.pushButton_3.clicked.connect(self.get_dir)
         self.pushButton_2.clicked.connect(self.set_dir)
         self.pushButton.clicked.connect(self.clear)
         self.pushButton_4.clicked.connect(self.translate_file)
+        self.pushButton_5.clicked.connect(self.get_file)
 
     def get_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self,"选择文件夹","/")
@@ -40,6 +42,15 @@ class Run_MainWindow(Ui_MainWindow,QMainWindow):
         result = result.replace("\ n","\r\n")
         print(result)
         self.textEdit_2.setText(result)
+
+    def get_file(self):
+        file_path,_ = QFileDialog.getOpenFileName(self,"选择文件","/","Text(*.txt);;All files(*)")
+        self.read_file(file_path)
+
+    def read_file(self,file):
+        with open(file,"r",encoding="utf-8") as f:
+            text = f.read()
+            self.textEdit.setText(text)
 
 
 

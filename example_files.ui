@@ -182,7 +182,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -235,6 +235,22 @@
     <hint type="destinationlabel">
      <x>296</x>
      <y>87</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_6</sender>
+   <signal>clicked()</signal>
+   <receiver>textEdit_2</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>503</x>
+     <y>475</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>493</x>
+     <y>344</y>
     </hint>
    </hints>
   </connection>
