@@ -7,10 +7,23 @@ import sys
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, \
-    QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QMessageBox, QTableWidget, QTableWidgetItem
+    QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QMessageBox, \
+    QTableWidget, QTableWidgetItem,QLabel
+
+from utils.database import DB
+from utils.thread import NewTaskThread
 
 
 class MainWindow(QWidget):
+    STATUS_MAPPING = {
+        0:"初始化中",
+        1:"待执行",
+        2:"正在执行",
+        3:"完成并提醒",
+        10:"异常并停止",
+        11:"初始化失败",
+    }
+
     def __init__(self):
         super().__init__()
         self.init_ui()
@@ -33,6 +46,8 @@ class MainWindow(QWidget):
 
         # 表格
         layout.addLayout(self.init_table())
+
+        layout.addLayout(self.init_footer())
 
         layout.addStretch(1)
         self.setLayout(layout)
@@ -67,12 +82,12 @@ class MainWindow(QWidget):
 
     def init_table(self):
         table = QHBoxLayout()
-        table_widget = QTableWidget(0, 8)
+        self.table_widget = table_widget = QTableWidget(0, 7)
         # 生成表头
         table_header_list = [
             {"field": "asin", "text": "ASIN", 'width': 120},
             {"field": "title", "text": "标题", 'width': 150},
-            {"field": "url", "text": "URL", 'width': 120},
+            {"field": "url", "text": "URL", 'width': 400},
             {"field": "price", "text": "底价", 'width': 120},
             {"field": "success", "text": "成功次数", 'width': 120},
             {"field": "status", "text": "状态", 'width': 120},
@@ -87,10 +102,7 @@ class MainWindow(QWidget):
             table_widget.setHorizontalHeaderItem(index, item)
 
         # 创建表内容
-        db_data_list = [
-            ["xx", "xx", "xx", "xx", "xx", "xx", "xx", "xx"],
-            ["oo", "oo", "oo", "oo", "oo", "oo", "oo", "oo"],
-        ]
+        db_data_list = DB.CACHE_LIST
 
         current_row_count = table_widget.rowCount()
         for item in db_data_list:
@@ -102,9 +114,47 @@ class MainWindow(QWidget):
         table.addWidget(table_widget)
         return table
 
+    def init_footer(self):
+        footer = QHBoxLayout()
+        self.label_status = label_status = QLabel("未检测",self)
+        footer.addWidget(label_status)
+
+        footer_config = QHBoxLayout()
+        footer_config.addStretch(1)
+
+        btn_reinit = QPushButton("重新初始化")
+        footer_config.addWidget(btn_reinit,0,Qt.AlignRight)
+        # btn_reinit.clicked.connect(self.event_reinit_click)
+
+        btn_recheck = QPushButton("重新检测")
+        footer_config.addWidget(btn_recheck,0,Qt.AlignRight)
+        # btn_recheck.clicked.connect(self.event_recheck_click)
+
+        btn_reset_count = QPushButton("次数清零")
+        footer_config.addWidget(btn_reset_count, 0, Qt.AlignRight)
+        # btn_reset_count.clicked.connect(self.event_reset_count_click)
+
+        btn_delete = QPushButton("删除检测项")
+        footer_config.addWidget(btn_delete, 0, Qt.AlignRight)
+        # btn_delete.clicked.connect(self.event_delete_click)
+
+        btn_alertr = QPushButton("SMTP报警配置")
+        footer_config.addWidget(btn_alertr, 0, Qt.AlignRight)
+        # btn_alertr.clicked.connect(self.event_alert_click)
+
+        btn_proxy = QPushButton("代理IP")
+        footer_config.addWidget(btn_proxy, 0, Qt.AlignRight)
+        # btn_proxy.clicked.connect(self.event_proxy_click)
+
+        footer.addLayout(footer_config)
+        return footer
+
     def creat_row(self, table_widget, item, new_row_index):
         for column, ele in enumerate(item):
-            cell = QTableWidgetItem(str(ele))
+
+            text = self.STATUS_MAPPING[item[column]] if column ==6 else item[column]
+
+            cell = QTableWidgetItem(str(text))
             if column in[0,4,5,6]:
                 #不可以被修改
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -117,10 +167,45 @@ class MainWindow(QWidget):
         QMessageBox.warning(self, "错误", "点击结束")
 
     def event_add_click(self):
-        QMessageBox.warning(self, "错误", "点击结束")
         # 获取数据
         text = self.txt_asin.text()
-        print(text)
+        if not text:
+            QMessageBox.warning(self,"错误","商品ASIN输入错误！")
+            return
+
+        text = text.replace("，",",")
+        asin_price_list = text.split(",")
+
+        #获取当前表格总共有多少行
+        current_row_index = self.table_widget.rowCount()
+
+        for item in asin_price_list:
+            data_pair = item.split("=")
+            if len(data_pair) !=2:
+                continue
+            try:
+                asin,price = data_pair
+                asin = asin.strip()
+                price = float(price.strip())
+            except Exception as e:
+                QMessageBox.warning(self,"错误","商品ASIN输入错误！")
+                return
+
+            #ASIN已存在，自动忽略不添加
+            if DB.get_by_asin(asin):
+                continue
+
+            #表格添加，数据库插入
+            new_row_data_list = [asin,"","",price,0,0,0,5]
+            DB.add(new_row_data_list)
+
+            self.table_widget.insertRow(current_row_index)
+            self.creat_row(self.table_widget,new_row_data_list,current_row_index)
+
+            #线程
+            thread = NewTaskThread(asin,self)
+            thread.start()
+            current_row_index +=1
 
 
 if __name__ == '__main__':
